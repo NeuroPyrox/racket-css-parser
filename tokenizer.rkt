@@ -68,7 +68,8 @@
                  (:or "l" "L")
                  "(" whitespace))
   (bad-uri-0 (:: uri-start
-                 (:* (:or (char-set "!#$%&*-~")
+                 (:* (:or (char-set "!#$%&")
+                          (:/ "*" "~")
                           non-ascii escape))
                  whitespace))
   (bad-uri-1 (:: uri-start string whitespace))
@@ -87,11 +88,11 @@
    [number 'number]
    [(:: number "%") 'percentage]
    [(:: number ident) 'dimension]
-   ; TODO review uri syntax
    [(:or
-     (:: uri-start whitespace string whitespace ")")
+     (:: uri-start string whitespace ")")
      (:: uri-start
-         (:* (:or (char-set "!#$%&*-~")
+         (:* (:or (char-set "!#$%&")
+                  (:/ "*" "~")
                   non-ascii escape))
          whitespace ")"))
     'uri]
