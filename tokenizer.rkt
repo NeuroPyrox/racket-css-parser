@@ -51,30 +51,30 @@
                                         escape))
                                (:? #\\)))
   (bad-string (:or bad-double-quote-string bad-single-quote-string))
-  (bad-comment-0 (:: "/*"
-                     (:* (:~ "*"))
-                     (:+ "*")
-                     (:* (:: (:~ (char-set "/*"))
-                             (:* (:~ "*"))
-                             (:+ "*")))))
-  (bad-comment-1 (:: "/*"
-                     (:* (:~ "*"))
-                     (:* (:: (:+ "*")
-                             (:~ (char-set "/*"))
-                             (:* (:~ "*"))))))
-  (bad-comment (:or bad-comment-0 bad-comment-1))
+  (comment-without-closing-asterisk
+   (:: "/*"
+       (:* (:~ "*"))
+       (:* (:: (:+ "*")
+               (:~ (char-set "/*"))
+               (:* (:~ "*"))))))
+  (comment-without-closing-slash
+   (:: comment-without-closing-asterisk (:+ "*")))
+  (bad-comment (:or comment-without-closing-slash
+                    comment-without-closing-asterisk))
   (uri-start (:: (:or "u" "U")
                  (:or "r" "R")
                  (:or "l" "L")
                  "(" whitespace))
-  (bad-uri-0 (:: uri-start
-                 (:* (:or (char-set "!#$%&")
-                          (:/ "*" "~")
-                          non-ascii escape))
-                 whitespace))
-  (bad-uri-1 (:: uri-start string whitespace))
-  (bad-uri-2 (:: uri-start bad-string))
-  (bad-uri (:or bad-uri-0 bad-uri-1 bad-uri-2)))
+  ; Covers both baduri1 and baduri2 from the standard
+  (uri-without-closing-parenthesis
+   (:: uri-start
+       (:or string
+            (:* (:or (char-set "!#$%&")
+                     (:/ "*" "~")
+                     non-ascii escape)))
+       whitespace))
+  (bad-uri (:or uri-without-closing-parenthesis
+                (:: uri-start bad-string))))
 ; TODO attach lexemes
 (define css-lexer
   (lexer
@@ -82,20 +82,13 @@
    [(:: "@" ident) 'at-keyword]
    [string 'string]
    [bad-string 'bad-string]
-   [bad-uri 'bad-uri]
+   [bad-uri 'bad-uri] ;
    [bad-comment 'bad-comment]
    [(:: "#" name) 'hash]
    [number 'number]
    [(:: number "%") 'percentage]
    [(:: number ident) 'dimension]
-   [(:or
-     (:: uri-start string whitespace ")")
-     (:: uri-start
-         (:* (:or (char-set "!#$%&")
-                  (:/ "*" "~")
-                  non-ascii escape))
-         whitespace ")"))
-    'uri]
+   [(:: uri-without-closing-parenthesis ")") 'uri]
    [(:: "u+"
         (:** 1 6 (:or alphanum "?"))
         (:? (:: "-" (:** 1 6 alphanum))))
@@ -111,14 +104,7 @@
    ["[" 'open-square-bracket]
    ["]" 'close-square-bracket]
    [(:+ (char-set " \t\r\n\f")) 'whitespace] ; Different from the whitespace macro
-   [(:: "/*"
-        (:* (:~ "*"))
-        (:+ "*")
-        (:* (:: (:~ (char-set "/*"))
-                (:* (:~ "*"))
-                (:+ "*")))
-        "/")
-    'comment]
+   [(:: comment-without-closing-slash "/") 'comment]
    [(:: ident "(") 'function]
    ["~=" 'includes]
    ["|=" 'dash-match]
