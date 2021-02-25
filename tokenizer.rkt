@@ -3,6 +3,8 @@
 (require (prefix-in : br-parser-tools/lex-sre))
 (require brag/support)
 ; Pay close attention to whitespace in this file cause it has 3 different definitions
+; Some lexer abbreviations could be made DRYer by moving them directly into css-lexer,
+; but that would make the code too different from the standard
 (define-lex-abbrevs
   (alphanum (:/ "0" "9" "a" "z" "A" "Z"))
   (digit (:/ "0" "9"))
@@ -28,29 +30,17 @@
                (:: (:* digit)
                    "."
                    (:+ digit))))
-  ; Many of the following rules could be made DRYer, but imo that would obscure them
-  (double-quote-string (:: #\"
+  (double-quote-start (:: #\"
                            (:* (:or (:~ (char-set "\n\r\f\\\""))
                                     (:: #\\ new-line)
-                                    escape))
-                           #\"))
-  (single-quote-string (:: #\'
+                                    escape))))
+  (single-quote-start (:: #\'
                            (:* (:or (:~ (char-set "\n\r\f\\\'"))
                                     (:: #\\ new-line)
-                                    escape))
-                           #\'))
-  (string (:or double-quote-string single-quote-string))
-  (bad-double-quote-string (:: #\"
-                               (:* (:or (:~ (char-set "\n\r\f\\\""))
-                                        (:: #\\ new-line)
-                                        escape))
-                               (:? #\\)))
-  (bad-single-quote-string (:: #\'
-                               (:* (:or (:~ (char-set "\n\r\f\\\'"))
-                                        (:: #\\ new-line)
-                                        escape))
-                               (:? #\\)))
-  (bad-string (:or bad-double-quote-string bad-single-quote-string))
+                                    escape))))
+  (string (:or (:: double-quote-start #\")
+               (:: single-quote-start #\')))
+  (bad-string (:: (:or double-quote-start single-quote-start) #\\))
   (comment-without-closing-asterisk
    (:: "/*"
        (:* (:~ "*"))
@@ -82,7 +72,7 @@
    [(:: "@" ident) 'at-keyword]
    [string 'string]
    [bad-string 'bad-string]
-   [bad-uri 'bad-uri] ;
+   [bad-uri 'bad-uri]
    [bad-comment 'bad-comment]
    [(:: "#" name) 'hash]
    [number 'number]
