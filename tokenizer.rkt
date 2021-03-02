@@ -31,13 +31,13 @@
                    "."
                    (:+ digit))))
   (double-quote-start (:: #\"
-                           (:* (:or (:~ (char-set "\n\r\f\\\""))
-                                    (:: #\\ new-line)
-                                    escape))))
+                          (:* (:or (:~ (char-set "\n\r\f\\\""))
+                                   (:: #\\ new-line)
+                                   escape))))
   (single-quote-start (:: #\'
-                           (:* (:or (:~ (char-set "\n\r\f\\\'"))
-                                    (:: #\\ new-line)
-                                    escape))))
+                          (:* (:or (:~ (char-set "\n\r\f\\\'"))
+                                   (:: #\\ new-line)
+                                   escape))))
   (string (:or (:: double-quote-start #\")
                (:: single-quote-start #\')))
   (bad-string (:: (:or double-quote-start single-quote-start) #\\))
@@ -66,39 +66,41 @@
   (bad-uri (:or uri-without-closing-parenthesis
                 (:: uri-start bad-string))))
 ; TODO attach lexemes
-(define css-lexer
-  (lexer
-   [ident 'ident]
-   [(:: "@" ident) 'at-keyword]
-   [string 'string]
-   [bad-string 'bad-string]
-   [bad-uri 'bad-uri]
-   [bad-comment 'bad-comment]
-   [(:: "#" name) 'hash]
-   [number 'number]
-   [(:: number "%") 'percentage]
-   [(:: number ident) 'dimension]
-   [(:: uri-without-closing-parenthesis ")") 'uri]
-   [(:: "u+"
-        (:** 1 6 (:or alphanum "?"))
-        (:? (:: "-" (:** 1 6 alphanum))))
-    'unicode-range]
-   ["<!--" 'cdo]
-   ["-->" 'cdc]
-   [":" 'colon]
-   [";" 'semicolon]
-   ["{" 'open-curly-bracket]
-   ["}" 'close-curly-bracket]
-   ["(" 'open-parentheses]
-   [")" 'close-parentheses]
-   ["[" 'open-square-bracket]
-   ["]" 'close-square-bracket]
-   [(:+ (char-set " \t\r\n\f")) 'whitespace] ; Different from the whitespace macro
-   [(:: comment-without-closing-slash "/") 'comment]
-   [(:: ident "(") 'function]
-   ["~=" 'includes]
-   ["|=" 'dash-match]
-   [any-char 'delim]))
 (define (make-tokenizer port)
-  (thunk (css-lexer port)))
+  (define (next-token)
+    (define css-lexer
+      (lexer
+       [ident 'ident]
+       [(:: "@" ident) 'at-keyword]
+       [string 'string]
+       [bad-string 'bad-string]
+       [bad-uri 'bad-uri]
+       [bad-comment 'bad-comment]
+       [(:: "#" name) 'hash]
+       [number 'number]
+       [(:: number "%") 'percentage]
+       [(:: number ident) 'dimension]
+       [(:: uri-without-closing-parenthesis ")") 'uri]
+       [(:: "u+"
+            (:** 1 6 (:or alphanum "?"))
+            (:? (:: "-" (:** 1 6 alphanum))))
+        'unicode-range]
+       ["<!--" 'cdo]
+       ["-->" 'cdc]
+       [":" 'colon]
+       [";" 'semicolon]
+       ["{" 'open-curly-bracket]
+       ["}" 'close-curly-bracket]
+       ["(" 'open-parentheses]
+       [")" 'close-parentheses]
+       ["[" 'open-square-bracket]
+       ["]" 'close-square-bracket]
+       [(:+ (char-set " \t\r\n\f")) 'whitespace] ; Different from the whitespace in define-lex-abbrevs
+       [(:: comment-without-closing-slash "/") (next-token)] ; Skip comment tokens
+       [(:: ident "(") 'function]
+       ["~=" 'includes]
+       ["|=" 'dash-match]
+       [any-char 'delim]))
+    (css-lexer port))
+  next-token)
 (define (test x) (apply-tokenizer-maker make-tokenizer x))
