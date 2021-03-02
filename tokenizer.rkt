@@ -40,7 +40,7 @@
                                    escape))))
   (string (:or (:: double-quote-start #\")
                (:: single-quote-start #\')))
-  (bad-string (:: (:or double-quote-start single-quote-start) #\\))
+  (bad-string (:: (:or double-quote-start single-quote-start) (:? #\\)))
   (comment-without-closing-asterisk
    (:: "/*"
        (:* (:~ "*"))
@@ -75,7 +75,7 @@
        [string 'string]
        [bad-string 'bad-string]
        [bad-uri 'bad-uri]
-       [bad-comment 'bad-comment]
+       [bad-comment 'bad-comment] ; Consumes the rest of the input
        [(:: "#" name) 'hash]
        [number 'number]
        [(:: number "%") 'percentage]
