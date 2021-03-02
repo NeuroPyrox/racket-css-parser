@@ -104,4 +104,4 @@
        [any-char (token 'DELIMETER lexeme)]))
     (css-lexer port))
   next-token)
-(define (test x) (apply-tokenizer-maker make-tokenizer x))
+(define (tokenize x) (apply-tokenizer-maker make-tokenizer x))
